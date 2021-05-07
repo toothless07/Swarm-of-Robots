@@ -1,4 +1,3 @@
-#hands on!!
 import cv2
 import numpy as np
 import matplotlib.pyplot as plt
@@ -7,11 +6,12 @@ import cv2.aruco as aruco
 import requests
 video=cv2.VideoCapture(1)
 
-
+#destX,destY contains the final point, the box should move to
 destX=100
 destY=100
 cdestX=100
 cdestY=100
+
 gridX=20
 gridY=20
 alongheight=True
@@ -20,7 +20,10 @@ notDecided=True
 traversing=True
 pushing=False
 node_count=0
+nDetection=True
 
+aruco2id={""=""}
+#traverse function is for traversing the bot on a given path
 def traverse(vector_aruco,path,node_count,id):
 	node_tbt=path[node_count]
 	x=path[node_count][0]
@@ -54,6 +57,7 @@ def traverse(vector_aruco,path,node_count,id):
 		requests.get(str(id)+'/l')
 		print('left')
 
+#once the bot reaches the point form where it should start pushing the box, push_box is called
 def push_box(vector_aruco,id):
 	node_tbt=[destX,destY]
 	vector_node=(node_tbt[0]-centroid[0],node_tbt[1]-centroid[1])
@@ -78,6 +82,7 @@ def push_box(vector_aruco,id):
 		requests.get(str(id)+'/l')
 		print('left')
 
+#shapedet function is used to detect the shape of a given contour
 def shapedet(c):
 	rect = cv2.minAreaRect(c)
 	w=rect[1][0]
@@ -96,23 +101,17 @@ def unit_vector(vector):
 	""" Returns the unit vector of the vector.  """
 	return vector / np.linalg.norm(vector)
 
+
+#this function is used to detect the angle between 2 vectors
 def angle_between(v1, v2):
 	v1_u = unit_vector(v1)
 	v2_u = unit_vector(v2)
 	return np.arccos(np.clip(np.dot(v1_u, v2_u), -1.0, 1.0))
 
-
+#this function is used to find distance between 2 coordinates
 def distance(a,b):
 	dist=(a[0]-b[0])**2+(a[1]-b[1])**2
 	return dist
-
-
-def Reverse(lst):
-	return [ele for ele in reversed(lst)] 
-
-
-
-
 
 
 import sys  
@@ -131,83 +130,17 @@ class Graph():
 	# A utility function to find the vertex with  
 	# minimum distance value, from the set of vertices  
 	# not yet included in shortest path tree 
-	def minDistance(self, dist, sptSet): 
-  
-		# Initilaize minimum distance for next node 
-		min = sys.maxsize 
-  
-		# Search not nearest vertex not in the  
-		# shortest path tree 
-	   
-		for v in range(self.V): 
 
-			if dist[v] < min and sptSet[v] == False: 
-				min = dist[v]
-				global min_index
-				min_index=v 
-  
-		return min_index 
-  
-	# Funtion that implements Dijkstra's single source  
-	# shortest path algorithm for a graph represented  
-	# using adjacency_matrix representation 
-	def parent(self,a):
-		for i in parent:
-			if i[1]==a:
-				return i[0]
-		
-	def dijkstra(self, src,dest): 
-  
-		global dist
-		dist = [sys.maxsize] * self.V 
-		dist[src] = 0
-		sptSet = [False] * self.V 
-		global parent
-		parent=[]
-  
-		for cout in range(self.V):
-  
-			# Pick the minimum distance vertex from  
-			# the set of vertices not yet processed.  
-			# u is always equal to src in first iteration 
-			u = self.minDistance(dist, sptSet) 
-  
-			# Put the minimum distance vertex in the  
-			# shotest path tree 
-			sptSet[u] = True
-
-  
-			# Update dist value of the adjacent vertices  
-			# of the picked vertex only if the current  
-			# distance is greater than new distance and 
-			# the vertex in not in the shotest path tree 
-			for v in range(self.V):
-				if self.graph[u][v] > 0 and sptSet[v] == False and dist[v] > dist[u] + self.graph[u][v]:
-					dist[v] = dist[u] + self.graph[u][v]
-					parent.append((u,v))
-		global path
-		path=[]
-		pqr=True
-		end=dest
-		path.append(dest)
-		while(pqr):
-			path.append(self.parent(end))
-			end=self.parent(end)
-			if end==src:
-				pqr=False
-		path.reverse()
-		# self.printSolution(dist)
-
-		def dfs(ti,tj,centroid,grid,pi,pj):
-			if ti<0 or tj<0 or ti>=gridX or tj>=gridY or grid[ti][tj]==0:
-				pass
-			parent[ti][tj]=[pi,pj]
-			if ti==centroid[0] and tj==centroid[1]:
-				pass
-			dfs(ti+1,tj,centroid,grid,ti,tj)
-			dfs(ti-1,tj,centroid,grid,ti,tj)
-			dfs(ti,tj+1,centroid,grid,ti,tj)
-			dfs(ti,tj-1,centroid,grid,ti,tj)
+def dfs(ti,tj,centroid,grid,pi,pj):
+	if ti<0 or tj<0 or ti>=gridX or tj>=gridY or grid[ti][tj]==0:
+		pass
+	parent[ti][tj]=[pi,pj]
+	if ti==centroid[0] and tj==centroid[1]:
+		pass
+	dfs(ti+1,tj,centroid,grid,ti,tj)
+	dfs(ti-1,tj,centroid,grid,ti,tj)
+	dfs(ti,tj+1,centroid,grid,ti,tj)
+	dfs(ti,tj-1,centroid,grid,ti,tj)
 
 while(1):
 	_,ooimg=video.read()
@@ -224,7 +157,7 @@ while(1):
 	min_dist=200
 
 	
-
+	#finding the center of the box that needs to be pushed
 	if(nDetection):
 
 		hsv=cv2.cvtColor(img,cv2.COLOR_BGR2HSV)
@@ -300,6 +233,8 @@ while(1):
 				intital_t=m4
 			else:
 				initial_t=m2;
+
+	#creating a graph and checking all the points on the graph, the bot can vist
 	gr=[]
 	for i in range(gridX):
 		gr.append(0)
@@ -324,13 +259,15 @@ while(1):
 
 	corners,ids,_=aruco.detectMarkers(img,aruco_dict,parameters=parameters)
 	bot_cent=[]
-
+	#storing centers of all the bots
 	for (c,i) in zip(corners,ids):
 		centroid=[(c[0][0][0]+c[0][1][0]+c[0][2][0]+c[0][3][0])/4,(c[0][0][1]+c[0][1][1]+c[0][2][1]+c[0][3][1])/4]
 		centroid=[(centroid[0]//630)*gridX,(centroid[1]//630)*gridY]
 		bot_cent.append(centroid,i)
 
+	#path planning for the ith bot
 	if not_decided:
+		centroid=bot_cent[startBot][0]
 		path=[]
 		dfs(ti,tj,centroid,grid,-1,-1)
 		x=centroid[0]
@@ -343,10 +280,11 @@ while(1):
 			y=yy
 			path.append([x,y])
 		not_decided=False
-
+	# traversing the ith bot
 	if traversing:
 		traverse(bot_cent[startBot][0],path,node_count,bot_cent[startBot][1])
 	time=0
+	#pushing the box via ith bot
 	if pushing:
 		pushing(bot_cent[startBot][0],bot_cent[startBot][1])
 		time++

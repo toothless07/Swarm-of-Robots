@@ -22,6 +22,9 @@ pushing=False
 node_count=0
 nDetection=True
 
+time=0
+
+#key contains the id of the aruco and value is the ip address of the node mcu it has on it
 aruco2id={""=""}
 #traverse function is for traversing the bot on a given path
 def traverse(vector_aruco,path,node_count,id):
@@ -33,28 +36,27 @@ def traverse(vector_aruco,path,node_count,id):
 	vector_node=(node_tbt[0]-centroid[0],node_tbt[1]-centroid[1])
 	angle=angle_between(vector_node,vector_aruco)
 	if  distance(centroid,node_tbt)<min_dist:
-		requests.get(str(id)+'/s')
+		requests.get(str(aruco2id(id))+'/s')
 		node_count=node_count+1
 		if node_count==len(path):
 			pushing=True
 			traversing=False
 			node_count=0
-		else node_count++
 		print('stop')
 
 
 	if angle<min_angle and distance(centroid,node_tbt)>min_dist:
-		requests.get(str(id)+'/F')
+		requests.get(str(aruco2id(id))+'/F')
 		print('forward')
 
 
 	if angle>min_angle and distance(corners[0][0][0],node_tbt)>distance(corners[0][0][1],node_tbt) and distance(centroid,node_tbt)>min_dist:
-		requests.get(str(id)+'/r')
+		requests.get(str(aruco2id(id))+'/r')
 		print('right')
 
 
 	if angle>min_angle and distance(corners[0][0][0],node_tbt)<=distance(corners[0][0][1],node_tbt) and distance(centroid,node_tbt)>min_dist:
-		requests.get(str(id)+'/l')
+		requests.get(str(aruco2id(id))+'/l')
 		print('left')
 
 #once the bot reaches the point form where it should start pushing the box, push_box is called
@@ -63,24 +65,24 @@ def push_box(vector_aruco,id):
 	vector_node=(node_tbt[0]-centroid[0],node_tbt[1]-centroid[1])
 	angle=angle_between(vector_node,vector_aruco)
 	if  distance(centroid,node_tbt)<min_dist:
-		if node_count==len(path):
-			return True
+		return True
 		print('stop')
 
 
 	if angle<min_angle and distance(centroid,node_tbt)>min_dist:
-		requests.get(str(id)+'/F')
+		requests.get(str(aruco2id(id))+'/F')
 		print('forward')
 
 
 	if angle>min_angle and distance(corners[0][0][0],node_tbt)>distance(corners[0][0][1],node_tbt) and distance(centroid,node_tbt)>min_dist:
-		requests.get(str(id)+'/r')
+		requests.get(str(aruco2id(id))+'/r')
 		print('right')
 
 
 	if angle>min_angle and distance(corners[0][0][0],node_tbt)<=distance(corners[0][0][1],node_tbt) and distance(centroid,node_tbt)>min_dist:
-		requests.get(str(id)+'/l')
+		requests.get(str(aruco2id(id))+'/l')
 		print('left')
+	return False
 
 #shapedet function is used to detect the shape of a given contour
 def shapedet(c):
@@ -133,10 +135,10 @@ class Graph():
 
 def dfs(ti,tj,centroid,grid,pi,pj):
 	if ti<0 or tj<0 or ti>=gridX or tj>=gridY or grid[ti][tj]==0:
-		pass
+		return
 	parent[ti][tj]=[pi,pj]
 	if ti==centroid[0] and tj==centroid[1]:
-		pass
+		return
 	dfs(ti+1,tj,centroid,grid,ti,tj)
 	dfs(ti-1,tj,centroid,grid,ti,tj)
 	dfs(ti,tj+1,centroid,grid,ti,tj)
@@ -280,15 +282,18 @@ while(1):
 			y=yy
 			path.append([x,y])
 		not_decided=False
+		traversing=True
 	# traversing the ith bot
 	if traversing:
 		traverse(bot_cent[startBot][0],path,node_count,bot_cent[startBot][1])
-	time=0
 	#pushing the box via ith bot
 	if pushing:
-		pushing(bot_cent[startBot][0],bot_cent[startBot][1])
+		 if push_box(bot_cent[startBot][0],bot_cent[startBot][1]):
+		 	break
 		time++
 		if time==5000 and distance([destX,destY],[cdestX,cdestY])<min_dist:
 			pushing=False
 			not_decided=True
+			startBot++
+			time=0
 
